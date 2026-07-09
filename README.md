@@ -32,13 +32,22 @@ Give it a level **folder** or a **ZIP** (nested folders are fine) and it produce
 
 ## How to run
 
-Requires [Python 3.8+](https://www.python.org/downloads/) (no packages needed - standard library only).
+**Easiest (Windows):** download `ChartSimplifier.exe` from the [latest release](https://github.com/HighStormPVP/ChartSimplifier/releases/latest) and double-click it. No install needed.
+
+**From source:** requires [Python 3.8+](https://www.python.org/downloads/) (no packages needed - standard library only).
 
 ```
 python app.py
 ```
 
 or double-click `ChartSimplifier.bat` on Windows.
+
+**Building the EXE yourself:**
+
+```
+pip install pyinstaller
+python -m PyInstaller --onefile --name ChartSimplifier --icon icon.ico --add-data "index.html;." app.py
+```
 
 Your browser opens automatically. Click **Select level folder** or **Select level ZIP**, and watch the console box report what was removed.
 

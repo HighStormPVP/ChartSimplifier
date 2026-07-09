@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .remember/
 CLAUDE.md
+build/
+dist/
+*.spec

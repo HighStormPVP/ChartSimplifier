@@ -15,31 +15,40 @@ from pathlib import Path
 from simplifier import simplify_level
 
 APP_DIR = Path(__file__).resolve().parent
-INDEX_FILE = APP_DIR / "index.html"
+# When frozen into an EXE, PyInstaller unpacks bundled files to _MEIPASS
+BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", APP_DIR))
+INDEX_FILE = BUNDLE_DIR / "index.html"
+FROZEN = getattr(sys, "frozen", False)
 PORT = 8347
 
 # Native dialogs run in a subprocess so tkinter never fights the server threads
 _DIALOG_LOCK = threading.Lock()
 
-_FOLDER_DIALOG = (
-    "import tkinter as tk;from tkinter import filedialog;"
-    "r=tk.Tk();r.withdraw();r.attributes('-topmost',True);"
-    "print(filedialog.askdirectory(title='Select your ADOFAI level folder'))"
-)
-_ZIP_DIALOG = (
-    "import tkinter as tk;from tkinter import filedialog;"
-    "r=tk.Tk();r.withdraw();r.attributes('-topmost',True);"
-    "print(filedialog.askopenfilename(title='Select your zipped ADOFAI level',"
-    "filetypes=[('ZIP files','*.zip')]))"
-)
+
+def run_dialog_mode(kind):
+    """Executed in the child process: show the dialog, print the chosen path."""
+    import tkinter as tk
+    from tkinter import filedialog
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    if kind == "folder":
+        path = filedialog.askdirectory(title="Select your ADOFAI level folder")
+    else:
+        path = filedialog.askopenfilename(
+            title="Select your zipped ADOFAI level",
+            filetypes=[("ZIP files", "*.zip")])
+    print(path or "")
 
 
-def open_dialog(script):
+def open_dialog(kind):
+    # A frozen EXE re-invokes itself with --dialog; a source run uses python -c
+    if FROZEN:
+        cmd = [sys.executable, "--dialog", kind]
+    else:
+        cmd = [sys.executable, str(Path(__file__).resolve()), "--dialog", kind]
     with _DIALOG_LOCK:
-        result = subprocess.run(
-            [sys.executable, "-c", script],
-            capture_output=True, text=True, timeout=300,
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     return result.stdout.strip()
 
 
@@ -68,9 +77,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == "/api/pick-folder":
-            self._send_json({"path": open_dialog(_FOLDER_DIALOG)})
+            self._send_json({"path": open_dialog("folder")})
         elif self.path == "/api/pick-zip":
-            self._send_json({"path": open_dialog(_ZIP_DIALOG)})
+            self._send_json({"path": open_dialog("zip")})
         elif self.path == "/api/simplify":
             length = int(self.headers.get("Content-Length", 0))
             try:
@@ -113,4 +122,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) >= 3 and sys.argv[1] == "--dialog":
+        run_dialog_mode(sys.argv[2])
+    else:
+        main()
