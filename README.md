@@ -9,7 +9,7 @@ ChartSimplifier strips an [A Dance of Fire and Ice](https://store.steampowered.c
 ## What it does
 
 Give it a level **folder** or a **ZIP** (nested folders are fine) and it produces
-`<level name> - Simplified.zip` in the same folder as the original. It runs in its
+`<level name> - Simplified` in the same folder as the original. It runs in its
 own native window - no browser, no console.
 
 ### Options
@@ -17,7 +17,8 @@ own native window - no browser, no console.
 - **Keep track colors** (on by default) - when off, Set Track Color / Recolor Track
   events are removed and the track color settings are reset to the defaults.
 - **Keep camera movements** (on by default) - when off, all Move Camera events are
-  removed and the Camera Settings are reset to defaults with zoom at 130%.
+  removed and the Camera Settings are reset to defaults with zoom at 150%.
+- **Export as** - ZIP (default) or a plain folder.
 
 ### Removed
 - All decorations from the Decorations tab: images, objects and particles (text decorations are kept)

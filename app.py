@@ -119,6 +119,8 @@ class Handler(BaseHTTPRequestHandler):
             options = {
                 "keep_track_color": bool(payload.get("keepTrackColor", True)),
                 "keep_camera": bool(payload.get("keepCamera", True)),
+                "output_format": ("folder" if payload.get("outputFormat") == "folder"
+                                  else "zip"),
             }
             log_lines = []
             try:

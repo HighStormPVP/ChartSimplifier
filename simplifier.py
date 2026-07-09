@@ -94,12 +94,12 @@ TRACK_COLOR_DEFAULTS = {
 }
 
 # Camera Settings defaults (used when "keep camera movements" is off) -
-# fresh-level values except zoom, which is set to 130%
+# fresh-level values except zoom, which is set to 150%
 CAMERA_DEFAULTS = {
     "relativeTo": "Player",
     "position": [0, 0],
     "rotation": 0,
-    "zoom": 130,
+    "zoom": 150,
     "pulseOnFloor": True,
 }
 
@@ -335,38 +335,56 @@ def simplify_level(input_path, log, options=None):
         if totals.get("track_reset"):
             log("Reset track color settings to default")
         if totals.get("camera_reset"):
-            log("Reset camera settings to default (zoom 130%)")
+            log("Reset camera settings to default (zoom 150%)")
         if totals.get("video_removed"):
             log("Removed video background")
 
-        # --- Build the output zip ---
+        # --- Write the output (zip or folder) ---
+        output_format = (options or {}).get("output_format", "zip")
         output_name = f"{level_name} - Simplified"
-        output_zip = output_dir / f"{output_name}.zip"
         skipped_files = 0
 
-        with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zf:
+        def include_files():
+            nonlocal skipped_files
             for file_path in sorted(level_root.rglob("*")):
                 if not file_path.is_file():
                     continue
-                rel = file_path.relative_to(level_root)
-                arcname = f"{output_name}/{rel.as_posix()}"
                 ext = file_path.suffix.lower()
+                if ((ext in IMAGE_EXTS or ext in VIDEO_EXTS)
+                        and file_path not in simplified_charts
+                        and file_path.name.strip().lower() not in referenced):
+                    skipped_files += 1
+                    continue
+                yield file_path, file_path.relative_to(level_root)
+
+        if output_format == "folder":
+            output_path = output_dir / output_name
+            if output_path.exists():
+                log(f"Replacing existing folder: {output_path.name}")
+                shutil.rmtree(output_path)
+            for file_path, rel in include_files():
+                target = output_path / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
                 if file_path in simplified_charts:
-                    text = json.dumps(simplified_charts[file_path],
-                                      ensure_ascii=False, indent=2)
-                    zf.writestr(arcname, text)
-                elif ext in IMAGE_EXTS or ext in VIDEO_EXTS:
-                    if file_path.name.strip().lower() in referenced:
-                        zf.write(file_path, arcname)
-                    else:
-                        skipped_files += 1
+                    save_adofai(simplified_charts[file_path], target)
                 else:
-                    zf.write(file_path, arcname)
+                    shutil.copy2(file_path, target)
+        else:
+            output_path = output_dir / f"{output_name}.zip"
+            with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                for file_path, rel in include_files():
+                    arcname = f"{output_name}/{rel.as_posix()}"
+                    if file_path in simplified_charts:
+                        text = json.dumps(simplified_charts[file_path],
+                                          ensure_ascii=False, indent=2)
+                        zf.writestr(arcname, text)
+                    else:
+                        zf.write(file_path, arcname)
 
         if skipped_files:
             log(f"Deleted {skipped_files} unused image/video file(s) from the level folder")
-        log(f"Done! Saved: {output_zip}")
-        return output_zip
+        log(f"Done! Saved: {output_path}")
+        return output_path
     finally:
         if temp_dir is not None:
             shutil.rmtree(temp_dir, ignore_errors=True)
@@ -377,9 +395,11 @@ if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     flags = {a for a in sys.argv[1:] if a.startswith("--")}
     if len(args) != 1:
-        print("Usage: python simplifier.py <level folder or zip> [--no-track-color] [--no-camera]")
+        print("Usage: python simplifier.py <level folder or zip>"
+              " [--no-track-color] [--no-camera] [--folder]")
         sys.exit(1)
     simplify_level(args[0], print, {
         "keep_track_color": "--no-track-color" not in flags,
         "keep_camera": "--no-camera" not in flags,
+        "output_format": "folder" if "--folder" in flags else "zip",
     })

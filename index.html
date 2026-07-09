@@ -134,6 +134,17 @@
   .opt input:focus-visible + .switch { outline: 2px solid var(--ice); outline-offset: 2px; }
   .opt:has(input:checked) { color: var(--text); }
 
+  /* export format segmented control */
+  .seg { display: flex; gap: 4px; background: #252a4d; border-radius: 9px; padding: 3px; }
+  .seg input { position: absolute; opacity: 0; }
+  .seg span {
+    display: block; padding: 4px 14px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; color: var(--dim);
+    cursor: pointer; transition: background 0.15s ease, color 0.15s ease;
+  }
+  .seg input:checked + span { background: var(--track); color: #241d0e; }
+  .seg input:focus-visible + span { outline: 2px solid var(--ice); outline-offset: 1px; }
+
   /* ---- console ---- */
   .console {
     margin-top: 16px;
@@ -208,6 +219,13 @@
         <input type="checkbox" id="optCamera" checked>
         <span class="switch" aria-hidden="true"></span>
       </label>
+      <div class="opt" role="radiogroup" aria-label="Export as">
+        Export as
+        <div class="seg">
+          <label><input type="radio" name="outputFormat" value="zip" checked><span>ZIP</span></label>
+          <label><input type="radio" name="outputFormat" value="folder"><span>Folder</span></label>
+        </div>
+      </div>
     </div>
     <div class="console" id="console" role="log" aria-live="polite">
       <div class="line">Waiting for a level...</div>
@@ -216,8 +234,8 @@
   </div>
 
   <footer>
-    The simplified level is saved as "&lt;level name&gt; - Simplified.zip"<br>
-    in the same folder as the original.
+    The simplified level is saved as "&lt;level name&gt; - Simplified"<br>
+    (ZIP or folder) in the same folder as the original.
   </footer>
 </div>
 
@@ -276,7 +294,8 @@
         body: JSON.stringify({
           path: pick.path,
           keepTrackColor: document.getElementById("optTrackColor").checked,
-          keepCamera: document.getElementById("optCamera").checked
+          keepCamera: document.getElementById("optCamera").checked,
+          outputFormat: document.querySelector('input[name="outputFormat"]:checked').value
         })
       }).then(r => r.json());
       (res.log || []).forEach((entry, i) => {
