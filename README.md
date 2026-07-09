@@ -9,7 +9,15 @@ ChartSimplifier strips an [A Dance of Fire and Ice](https://store.steampowered.c
 ## What it does
 
 Give it a level **folder** or a **ZIP** (nested folders are fine) and it produces
-`<level name> - Simplified.zip` in the same folder as the original.
+`<level name> - Simplified.zip` in the same folder as the original. It runs in its
+own native window - no browser, no console.
+
+### Options
+
+- **Keep track colors** (on by default) - when off, Set Track Color / Recolor Track
+  events are removed and the track color settings are reset to the defaults.
+- **Keep camera movements** (on by default) - when off, all Move Camera events are
+  removed and the Camera Settings are reset to defaults with zoom at 130%.
 
 ### Removed
 - All decorations from the Decorations tab: images, objects and particles (text decorations are kept)
@@ -33,22 +41,25 @@ Give it a level **folder** or a **ZIP** (nested folders are fine) and it produce
 
 **Easiest (Windows):** download `ChartSimplifier.exe` from the [latest release](https://github.com/HighStormPVP/ChartSimplifier/releases/latest) and double-click it. No install needed.
 
-**From source:** requires [Python 3.8+](https://www.python.org/downloads/) (no packages needed - standard library only).
+**From source:** requires [Python 3.8+](https://www.python.org/downloads/).
 
 ```
+pip install pywebview
 python app.py
 ```
 
-or double-click `ChartSimplifier.bat` on Windows.
+or double-click `ChartSimplifier.bat` on Windows. (`pywebview` is optional - it
+provides the native window. Without it the app opens as an Edge/Chrome app
+window, or a browser tab as a last resort.)
 
 **Building the EXE yourself:**
 
 ```
-pip install pyinstaller
-python -m PyInstaller --onefile --name ChartSimplifier --icon icon.ico --add-data "index.html;." app.py
+pip install pywebview pyinstaller
+python -m PyInstaller --onefile --noconsole --name ChartSimplifier --icon icon.ico --add-data "index.html;." app.py
 ```
 
-Your browser opens automatically. Click **Select level folder** or **Select level ZIP**, and watch the console box report what was removed.
+Click **Select level folder** or **Select level ZIP**, and watch the console box report what was removed.
 
 ## Notes
 

@@ -1,18 +1,30 @@
 """ChartSimplifier - local app that turns any ADOFAI chart into a layout.
 
 Run with:  python app.py
-Opens a small web UI in your browser. No dependencies beyond Python 3.8+.
+Opens in its own native window (pywebview). Falls back to an Edge/Chrome app
+window, then to a browser tab. Only optional dependency: pywebview.
 """
 
 import json
+import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import threading
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from simplifier import simplify_level
+
+try:
+    import webview  # pywebview - native window
+except Exception:
+    webview = None
+
+WINDOW = None  # the pywebview window, when running in native mode
 
 APP_DIR = Path(__file__).resolve().parent
 # When frozen into an EXE, PyInstaller unpacks bundled files to _MEIPASS
@@ -42,7 +54,24 @@ def run_dialog_mode(kind):
 
 
 def open_dialog(kind):
-    # A frozen EXE re-invokes itself with --dialog; a source run uses python -c
+    # Native mode: pywebview's own file dialogs, parented to our window
+    if WINDOW is not None:
+        try:
+            file_dialog = getattr(webview, "FileDialog", None)
+            if kind == "folder":
+                dialog_type = file_dialog.FOLDER if file_dialog else webview.FOLDER_DIALOG
+                result = WINDOW.create_file_dialog(dialog_type)
+            else:
+                dialog_type = file_dialog.OPEN if file_dialog else webview.OPEN_DIALOG
+                result = WINDOW.create_file_dialog(
+                    dialog_type, file_types=("ZIP files (*.zip)",))
+            if not result:
+                return ""
+            return result[0] if isinstance(result, (list, tuple)) else str(result)
+        except Exception:
+            pass  # fall through to the tkinter subprocess
+
+    # A frozen EXE re-invokes itself with --dialog; a source run uses python
     if FROZEN:
         cmd = [sys.executable, "--dialog", kind]
     else:
@@ -87,16 +116,71 @@ class Handler(BaseHTTPRequestHandler):
             except json.JSONDecodeError:
                 payload = {}
             path = (payload.get("path") or "").strip().strip('"')
+            options = {
+                "keep_track_color": bool(payload.get("keepTrackColor", True)),
+                "keep_camera": bool(payload.get("keepCamera", True)),
+            }
             log_lines = []
             try:
                 if not path:
                     raise ValueError("No level selected.")
-                output = simplify_level(path, log_lines.append)
+                output = simplify_level(path, log_lines.append, options)
                 self._send_json({"ok": True, "log": log_lines, "output": str(output)})
             except Exception as exc:  # surfaced in the UI console
                 self._send_json({"ok": False, "log": log_lines, "error": str(exc)})
         else:
             self.send_error(404)
+
+
+def find_app_browser():
+    """A Chromium browser we can launch in app mode (own window, no tabs)."""
+    candidates = [
+        r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe",
+        r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe",
+        r"%ProgramFiles%\Google\Chrome\Application\chrome.exe",
+        r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe",
+        r"%LocalAppData%\Google\Chrome\Application\chrome.exe",
+    ]
+    for candidate in candidates:
+        path = Path(os.path.expandvars(candidate))
+        if path.is_file():
+            return str(path)
+    return None
+
+
+def open_native_window(url):
+    """True native window via pywebview (WebView2). Blocks until closed."""
+    if webview is None:
+        return False
+    global WINDOW
+    try:
+        WINDOW = webview.create_window(
+            "ChartSimplifier", url, width=640, height=900,
+            background_color="#0c0d1a")
+        webview.start()
+        return True
+    except Exception:
+        WINDOW = None
+        return False
+
+
+def open_app_window(url):
+    """Fallback: Edge/Chrome app-mode window. Blocks until closed."""
+    browser = find_app_browser()
+    if not browser:
+        return False
+    profile = Path(tempfile.gettempdir()) / "ChartSimplifierWindow"
+    proc = subprocess.Popen([
+        browser, f"--app={url}", f"--user-data-dir={profile}",
+        "--window-size=640,900", "--no-first-run",
+        "--no-default-browser-check",
+    ])
+    try:
+        proc.wait()
+    except KeyboardInterrupt:
+        proc.terminate()
+    shutil.rmtree(profile, ignore_errors=True)
+    return True
 
 
 def main():
@@ -113,12 +197,17 @@ def main():
         sys.exit(1)
 
     url = f"http://127.0.0.1:{port}"
-    print(f"ChartSimplifier running at {url}  (Ctrl+C to quit)")
-    threading.Timer(0.4, webbrowser.open, args=(url,)).start()
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+
     try:
-        server.serve_forever()
+        if not open_native_window(url) and not open_app_window(url):
+            print(f"ChartSimplifier running at {url}  (Ctrl+C to quit)")
+            webbrowser.open(url)
+            while True:
+                time.sleep(3600)
     except KeyboardInterrupt:
-        print("\nBye!")
+        pass
+    server.shutdown()
 
 
 if __name__ == "__main__":

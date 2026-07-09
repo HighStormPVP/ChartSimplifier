@@ -78,6 +78,31 @@ VIDEO_DEFAULTS = {
     "vidOffset": 0,
 }
 
+# Fresh-level defaults - track color/style (used when "keep track colors" is off;
+# track animation keys are deliberately left alone)
+TRACK_COLOR_DEFAULTS = {
+    "trackColorType": "Single",
+    "trackColor": "debb7b",
+    "secondaryTrackColor": "ffffff",
+    "trackColorAnimDuration": 2,
+    "trackColorPulse": "None",
+    "trackPulseLength": 10,
+    "trackStyle": "Standard",
+    "trackTexture": "",
+    "trackTextureScale": 1,
+    "trackGlowIntensity": 100,
+}
+
+# Camera Settings defaults (used when "keep camera movements" is off) -
+# fresh-level values except zoom, which is set to 130%
+CAMERA_DEFAULTS = {
+    "relativeTo": "Player",
+    "position": [0, 0],
+    "rotation": 0,
+    "zoom": 130,
+    "pulseOnFloor": True,
+}
+
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".tif", ".tiff"}
 VIDEO_EXTS = {".mp4", ".avi", ".webm", ".mov", ".mkv", ".wmv", ".flv", ".m4v"}
 
@@ -129,12 +154,17 @@ def save_adofai(data, path):
 # Chart simplification
 # ---------------------------------------------------------------------------
 
-def simplify_chart(data, log):
+def simplify_chart(data, log, options=None):
     """Simplify one parsed .adofai chart in place. Returns stats dict."""
+    opts = options or {}
+    keep_track_color = opts.get("keep_track_color", True)
+    keep_camera = opts.get("keep_camera", True)
     stats = {
         "visual_removed": 0, "deco_events_removed": 0,
+        "track_color_removed": 0, "camera_removed": 0,
         "kept": 0, "unknown_kept": 0, "decorations_removed": 0, "text_kept": 0,
         "bg_reset": False, "video_removed": False,
+        "track_reset": False, "camera_reset": False,
     }
 
     # --- Tile events ---
@@ -148,6 +178,10 @@ def simplify_chart(data, log):
                 # decoration - keep it.
                 kept_actions.append(event)
                 stats["text_kept"] += 1
+            elif not keep_track_color and etype in ("ColorTrack", "RecolorTrack"):
+                stats["track_color_removed"] += 1
+            elif not keep_camera and etype == "MoveCamera":
+                stats["camera_removed"] += 1
             elif etype in REMOVE_EVENTS:
                 if etype in ("AddDecoration", "AddObject", "AddParticle", "AddText",
                              "MoveDecorations", "EmitParticle", "SetParticle", "SetObject"):
@@ -188,6 +222,16 @@ def simplify_chart(data, log):
             if key in settings:
                 settings[key] = default
         stats["video_removed"] = had_video
+        if not keep_track_color:
+            for key, default in TRACK_COLOR_DEFAULTS.items():
+                if key in settings and settings[key] != default:
+                    settings[key] = default
+                    stats["track_reset"] = True
+        if not keep_camera:
+            for key, default in CAMERA_DEFAULTS.items():
+                if key in settings and settings[key] != default:
+                    settings[key] = default
+                    stats["camera_reset"] = True
 
     return stats
 
@@ -227,7 +271,7 @@ def find_level_root(base):
     return root
 
 
-def simplify_level(input_path, log):
+def simplify_level(input_path, log, options=None):
     """Simplify a level folder or zip. Returns the path of the output zip."""
     input_path = Path(input_path)
     if not input_path.exists():
@@ -261,7 +305,7 @@ def simplify_level(input_path, log):
         charts = sorted(level_root.rglob("*.adofai"))
         for chart_path in charts:
             data = load_adofai(chart_path)
-            stats = simplify_chart(data, log)
+            stats = simplify_chart(data, log, options)
             simplified_charts[chart_path] = data
             referenced |= collect_referenced_files(data)
             for key, value in stats.items():
@@ -282,8 +326,16 @@ def simplify_level(input_path, log):
         log(f"Kept {totals.get('kept', 0)} gameplay/track/camera events")
         if totals.get("unknown_kept"):
             log(f"Kept {totals['unknown_kept']} unrecognized events (left untouched for safety)")
+        if totals.get("track_color_removed"):
+            log(f"Removed {totals['track_color_removed']} track color events")
+        if totals.get("camera_removed"):
+            log(f"Removed {totals['camera_removed']} camera movement events")
         if totals.get("bg_reset"):
             log("Reset background settings to fresh-level defaults")
+        if totals.get("track_reset"):
+            log("Reset track color settings to default")
+        if totals.get("camera_reset"):
+            log("Reset camera settings to default (zoom 130%)")
         if totals.get("video_removed"):
             log("Removed video background")
 
@@ -322,7 +374,12 @@ def simplify_level(input_path, log):
 
 if __name__ == "__main__":
     import sys
-    if len(sys.argv) != 2:
-        print("Usage: python simplifier.py <level folder or zip>")
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    flags = {a for a in sys.argv[1:] if a.startswith("--")}
+    if len(args) != 1:
+        print("Usage: python simplifier.py <level folder or zip> [--no-track-color] [--no-camera]")
         sys.exit(1)
-    simplify_level(sys.argv[1], print)
+    simplify_level(args[0], print, {
+        "keep_track_color": "--no-track-color" not in flags,
+        "keep_camera": "--no-camera" not in flags,
+    })
