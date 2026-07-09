@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChartSimplifier</title>
+<style>
+  :root {
+    --bg: #0c0d1a;          /* deep space, from ADOFAI's default BG tile */
+    --panel: #13152a;
+    --line: #252a4d;
+    --fire: #ff5449;        /* fire planet */
+    --ice: #57a8ff;         /* ice planet */
+    --track: #debb7b;       /* ADOFAI default track color */
+    --text: #ece7da;
+    --dim: #8b8fad;
+    --ok: #7dd67d;
+    --err: #ff7a72;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(1000px 500px at 50% -10%, #171a35 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px;
+  }
+  .app { width: 100%; max-width: 560px; }
+
+  /* ---- header: orbiting planets ---- */
+  header { text-align: center; margin-bottom: 12px; }
+  .orbit {
+    width: 74px; height: 74px;
+    margin: 0 auto 18px;
+    position: relative;
+  }
+  .planet {
+    position: absolute; top: 50%; left: 50%;
+    width: 22px; height: 22px; border-radius: 50%;
+    margin: -11px 0 0 -11px;
+  }
+  .planet.fire {
+    background: radial-gradient(circle at 35% 30%, #ffa198, var(--fire) 60%, #b32219);
+    box-shadow: 0 0 18px #ff544966;
+  }
+  .planet.ice {
+    background: radial-gradient(circle at 35% 30%, #bcdcff, var(--ice) 60%, #1e63b8);
+    box-shadow: 0 0 18px #57a8ff66;
+    animation: orbit 2.4s linear infinite;
+  }
+  @keyframes orbit {
+    from { transform: rotate(0turn) translateX(26px); }
+    to   { transform: rotate(1turn) translateX(26px); }
+  }
+  h1 {
+    font-size: 30px; font-weight: 800; letter-spacing: 0.06em;
+  }
+  h1 .grad {
+    background: linear-gradient(90deg, var(--fire), var(--ice));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .tagline { color: var(--dim); margin-top: 6px; font-size: 15px; }
+
+  /* ---- the signature: a track that loses its decoration ---- */
+  .track-demo {
+    display: flex; justify-content: center; gap: 5px;
+    margin: 26px 0 30px;
+  }
+  .tile {
+    width: 30px; height: 12px; border-radius: 3px;
+    transform: skewX(-18deg);
+  }
+
+  /* ---- action panel ---- */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 26px;
+  }
+  .panel p { color: var(--dim); font-size: 14px; text-align: center; margin-bottom: 18px; }
+  .buttons { display: flex; gap: 12px; }
+  button {
+    flex: 1;
+    font: 600 15px/1 "Segoe UI", system-ui, sans-serif;
+    color: #241d0e;
+    background: var(--track);
+    border: none; border-radius: 9px;
+    padding: 15px 10px;
+    cursor: pointer;
+    transition: transform 0.08s ease, box-shadow 0.15s ease;
+  }
+  button:hover:not(:disabled) { box-shadow: 0 0 22px #debb7b40; transform: translateY(-1px); }
+  button:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+  button:disabled { opacity: 0.45; cursor: wait; }
+  button.secondary {
+    background: transparent; color: var(--track);
+    border: 1px solid var(--track);
+  }
+
+  /* ---- console ---- */
+  .console {
+    margin-top: 16px;
+    background: #07080f;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    min-height: 150px; max-height: 300px;
+    overflow-y: auto;
+    font: 13px/1.75 "Cascadia Mono", Consolas, monospace;
+    color: var(--dim);
+  }
+  .console .line { animation: rise 0.25s ease both; overflow-wrap: break-word; }
+  .console .line::before { content: "» "; color: #4a4f75; }
+  .console .ok   { color: var(--ok); }
+  .console .err  { color: var(--err); }
+  .console .info { color: var(--text); }
+  .cursor {
+    display: inline-block; width: 8px; height: 13px;
+    background: var(--track); vertical-align: -2px;
+    animation: blink 1.1s steps(1) infinite;
+  }
+  @keyframes rise  { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  footer {
+    text-align: center; color: #565b80;
+    font-size: 12.5px; margin-top: 18px; line-height: 1.6;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .planet.ice { animation: none; transform: translateX(26px); }
+    .console .line { animation: none; }
+    .cursor { animation: none; }
+    button { transition: none; }
+  }
+  @media (max-width: 430px) {
+    .buttons { flex-direction: column; }
+    .tile:nth-child(n+9) { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="orbit" aria-hidden="true">
+      <div class="planet fire"></div>
+      <div class="planet ice"></div>
+    </div>
+    <h1>CHART <span class="grad">SIMPLIFIER</span></h1>
+    <div class="tagline">Turns any chart into a layout.</div>
+  </header>
+
+  <!-- decorated tiles fading into a plain layout -->
+  <div class="track-demo" aria-hidden="true" id="trackDemo"></div>
+
+  <div class="panel">
+    <p>Pick a level - decorations, visual effects and backgrounds are stripped,<br>
+       gameplay stays exactly as it is.</p>
+    <div class="buttons">
+      <button id="btnFolder">Select level folder</button>
+      <button id="btnZip" class="secondary">Select level ZIP</button>
+    </div>
+    <div class="console" id="console" role="log" aria-live="polite">
+      <div class="line">Waiting for a level...</div>
+      <span class="cursor"></span>
+    </div>
+  </div>
+
+  <footer>
+    The simplified level is saved as "&lt;level name&gt; - Simplified.zip"<br>
+    in the same folder as the original.
+  </footer>
+</div>
+
+<script>
+  // Signature strip: decorated tiles on the left dissolve into the plain
+  // default track color on the right - what the tool does, as a picture.
+  (function () {
+    const demo = document.getElementById("trackDemo");
+    const decoColors = ["#ff5449", "#57a8ff", "#c678dd", "#7dd67d", "#ffd166"];
+    const tiles = 12;
+    for (let i = 0; i < tiles; i++) {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      const progress = i / (tiles - 1);
+      if (progress < 0.5) {
+        tile.style.background = decoColors[i % decoColors.length];
+        tile.style.opacity = String(1 - progress * 0.5);
+      } else {
+        tile.style.background = "#debb7b";
+      }
+      demo.appendChild(tile);
+    }
+  })();
+
+  const consoleBox = document.getElementById("console");
+  const cursor = consoleBox.querySelector(".cursor");
+  const buttons = [document.getElementById("btnFolder"), document.getElementById("btnZip")];
+
+  function log(text, cls) {
+    const line = document.createElement("div");
+    line.className = "line" + (cls ? " " + cls : "");
+    line.textContent = text;
+    consoleBox.insertBefore(line, cursor);
+    consoleBox.scrollTop = consoleBox.scrollHeight;
+  }
+
+  function clearConsole() {
+    consoleBox.querySelectorAll(".line").forEach(l => l.remove());
+  }
+
+  function setBusy(busy) {
+    buttons.forEach(b => b.disabled = busy);
+  }
+
+  async function run(pickEndpoint) {
+    setBusy(true);
+    try {
+      const pick = await fetch(pickEndpoint, { method: "POST" }).then(r => r.json());
+      if (!pick.path) { setBusy(false); return; }   // user cancelled the dialog
+      clearConsole();
+      log("Selected: " + pick.path, "info");
+      log("Simplifying...");
+      const res = await fetch("/api/simplify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: pick.path })
+      }).then(r => r.json());
+      (res.log || []).forEach((entry, i) => {
+        const last = i === res.log.length - 1;
+        setTimeout(() => log(entry, res.ok && last ? "ok" : ""), i * 90);
+      });
+      if (!res.ok) {
+        setTimeout(() => log("Error: " + res.error, "err"), (res.log || []).length * 90);
+      }
+    } catch (e) {
+      log("Error: could not reach the local app. Is app.py still running?", "err");
+    }
+    setBusy(false);
+  }
+
+  document.getElementById("btnFolder").onclick = () => run("/api/pick-folder");
+  document.getElementById("btnZip").onclick = () => run("/api/pick-zip");
+</script>
+</body>
+</html>
