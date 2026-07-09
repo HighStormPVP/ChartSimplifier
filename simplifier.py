@@ -24,8 +24,8 @@ KEEP_EVENTS = {
     # Gameplay
     "SetSpeed", "Twirl", "Checkpoint", "SetHitsound", "PlaySound",
     "SetPlanetRotation", "Pause", "AutoPlayTiles", "ScalePlanets",
-    # Track (movement/animation only - recolors are removed)
-    "MoveTrack", "PositionTrack", "AnimateTrack",
+    # Track
+    "MoveTrack", "PositionTrack", "AnimateTrack", "ColorTrack", "RecolorTrack",
     # Text decoration events (the only decoration events kept)
     "SetText", "SetDefaultText",
     # Allowed visual events
@@ -48,8 +48,6 @@ REMOVE_EVENTS = {
     "Flash", "SetFilter", "SetFilterAdvanced", "HallOfMirrors",
     "ShakeScreen", "Bloom", "ScreenTile", "ScreenScroll",
     "CustomBackground", "SetBackground",
-    # Track recolors (visual only)
-    "ColorTrack", "RecolorTrack",
 }
 
 # Decoration objects (in the "decorations" array) that are kept
@@ -134,7 +132,7 @@ def save_adofai(data, path):
 def simplify_chart(data, log):
     """Simplify one parsed .adofai chart in place. Returns stats dict."""
     stats = {
-        "visual_removed": 0, "deco_events_removed": 0, "track_recolors_removed": 0,
+        "visual_removed": 0, "deco_events_removed": 0,
         "kept": 0, "unknown_kept": 0, "decorations_removed": 0, "text_kept": 0,
         "bg_reset": False, "video_removed": False,
     }
@@ -151,10 +149,8 @@ def simplify_chart(data, log):
                 kept_actions.append(event)
                 stats["text_kept"] += 1
             elif etype in REMOVE_EVENTS:
-                if etype in ("ColorTrack", "RecolorTrack"):
-                    stats["track_recolors_removed"] += 1
-                elif etype in ("AddDecoration", "AddObject", "AddParticle", "AddText",
-                               "MoveDecorations", "EmitParticle", "SetParticle", "SetObject"):
+                if etype in ("AddDecoration", "AddObject", "AddParticle", "AddText",
+                             "MoveDecorations", "EmitParticle", "SetParticle", "SetObject"):
                     stats["deco_events_removed"] += 1
                 else:
                     stats["visual_removed"] += 1
@@ -281,8 +277,6 @@ def simplify_level(input_path, log):
             log(f"Removed {totals['deco_events_removed']} decoration events from tiles")
         if totals.get("visual_removed"):
             log(f"Removed {totals['visual_removed']} visual events (flash, filters, bloom, shake...)")
-        if totals.get("track_recolors_removed"):
-            log(f"Removed {totals['track_recolors_removed']} track recolor events")
         if totals.get("text_kept"):
             log(f"Kept {totals['text_kept']} text decorations")
         log(f"Kept {totals.get('kept', 0)} gameplay/track/camera events")

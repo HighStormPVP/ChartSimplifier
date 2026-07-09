@@ -15,14 +15,13 @@ Give it a level **folder** or a **ZIP** (nested folders are fine) and it produce
 - All decorations from the Decorations tab: images, objects and particles (text decorations are kept)
 - All decoration events on tiles: Add Decoration, Add Object, Add Particle, Move Decorations, Emit Particle, Set Particle, Set Object
 - All visual events: Flash, Set Filter, Set Filter Advanced, Hall of Mirrors, Shake Screen, Bloom, Screen Tile, Screen Scroll, Custom Background
-- Track recolor events: Color Track, Recolor Track
 - The video background (Misc Settings)
 - Background Settings are reset to the fresh-level defaults
 - Image/video files in the level folder that are no longer referenced
 
 ### Kept
 - **Gameplay:** Set Speed, Twirl, Checkpoint, Set Hitsound, Play Sound, Set Planet Orbit, Paused Beats, Autoplay Tiles, Scale Planets
-- **Track:** Move Track, Position Track, Set Track Animation
+- **Track:** Move Track, Position Track, Set Track Animation, Set Track Color, Recolor Track
 - **Camera:** Move Camera, and Set Frame Rate
 - **Text:** Add Text, Set Text, Set Default Text
 - **Conveniences & Event Modifiers:** Editor Comment, Bookmark, Repeat Events, Set Conditional Events
