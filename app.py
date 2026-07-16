@@ -136,13 +136,27 @@ class Handler(BaseHTTPRequestHandler):
 
 def find_app_browser():
     """A Chromium browser we can launch in app mode (own window, no tabs)."""
-    candidates = [
-        r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe",
-        r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe",
-        r"%ProgramFiles%\Google\Chrome\Application\chrome.exe",
-        r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe",
-        r"%LocalAppData%\Google\Chrome\Application\chrome.exe",
-    ]
+    if sys.platform == "darwin":
+        candidates = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+            "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+        ]
+    elif sys.platform.startswith("win"):
+        candidates = [
+            r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe",
+            r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe",
+            r"%ProgramFiles%\Google\Chrome\Application\chrome.exe",
+            r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe",
+            r"%LocalAppData%\Google\Chrome\Application\chrome.exe",
+        ]
+    else:  # Linux / other
+        candidates = [
+            "/usr/bin/google-chrome", "/usr/bin/chromium",
+            "/usr/bin/chromium-browser", "/usr/bin/microsoft-edge",
+            "/snap/bin/chromium",
+        ]
     for candidate in candidates:
         path = Path(os.path.expandvars(candidate))
         if path.is_file():
@@ -151,7 +165,8 @@ def find_app_browser():
 
 
 def open_native_window(url):
-    """True native window via pywebview (WebView2). Blocks until closed."""
+    """True native window via pywebview (WebView2 on Windows, WKWebView on
+    macOS, GTK/WebKit on Linux). Blocks until the window is closed."""
     if webview is None:
         return False
     global WINDOW

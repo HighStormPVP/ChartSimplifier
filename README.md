@@ -6,6 +6,20 @@ ChartSimplifier strips an [A Dance of Fire and Ice](https://store.steampowered.c
 
 ![ChartSimplifier UI](screenshot.png)
 
+## Platforms
+
+| Platform | Where | How to run |
+|----------|-------|------------|
+| **Windows** | this repo | Download the EXE from [Releases](https://github.com/HighStormPVP/ChartSimplifier/releases/latest), or `python app.py` |
+| **macOS** | [`mac/`](mac/) | `mac/run.command`, or build a `.app` with `mac/build_app.command` |
+| **Android** | [`android/`](android/) | Install the APK from [Releases](https://github.com/HighStormPVP/ChartSimplifier/releases/latest), or build with `./gradlew assembleDebug` |
+
+The desktop app (Windows/macOS/Linux) is Python + pywebview and reuses
+`simplifier.py`. Android is a native WebView app whose chart logic
+([`android/app/src/main/assets/simplifier.js`](android/app/src/main/assets/simplifier.js))
+is a JavaScript port verified to produce byte-identical output to the Python core
+on real charts.
+
 ## What it does
 
 Give it a level **folder** or a **ZIP** (nested folders are fine) and it produces

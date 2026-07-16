@@ -5,3 +5,19 @@ CLAUDE.md
 build/
 dist/
 *.spec
+
+# Android build artifacts
+android/.gradle/
+android/.idea/
+android/build/
+android/app/build/
+android/local.properties
+android/captures/
+*.iml
+
+# macOS build artifacts
+mac/build/
+mac/dist/
+
+# Node (parity test / tooling)
+node_modules/

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ChartSimplifier</title>
+<style>
+  :root {
+    --bg: #0c0d1a; --panel: #13152a; --line: #252a4d;
+    --fire: #ff5449; --ice: #57a8ff; --track: #debb7b;
+    --text: #ece7da; --dim: #8b8fad; --ok: #7dd67d; --err: #ff7a72;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(120% 60% at 50% -10%, #171a35 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    padding: env(safe-area-inset-top) 18px env(safe-area-inset-bottom);
+    display: flex; flex-direction: column;
+    user-select: none; -webkit-user-select: none;
+  }
+  header { text-align: center; padding: 26px 0 8px; }
+  .orbit { width: 66px; height: 66px; margin: 0 auto 16px; position: relative; }
+  .planet { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px;
+    border-radius: 50%; margin: -10px 0 0 -10px; }
+  .planet.fire { background: radial-gradient(circle at 35% 30%, #ffa198, var(--fire) 60%, #b32219);
+    box-shadow: 0 0 16px #ff544966; }
+  .planet.ice { background: radial-gradient(circle at 35% 30%, #bcdcff, var(--ice) 60%, #1e63b8);
+    box-shadow: 0 0 16px #57a8ff66; animation: orbit 2.4s linear infinite; }
+  @keyframes orbit { from { transform: rotate(0turn) translateX(23px); }
+    to { transform: rotate(1turn) translateX(23px); } }
+  h1 { font-size: 26px; font-weight: 800; letter-spacing: 0.06em; }
+  h1 .grad { background: linear-gradient(90deg, var(--fire), var(--ice));
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .tagline { color: var(--dim); margin-top: 6px; font-size: 14px; }
+
+  .panel { background: var(--panel); border: 1px solid var(--line);
+    border-radius: 16px; padding: 20px; margin-top: 18px; }
+  .lead { color: var(--dim); font-size: 13.5px; text-align: center; margin-bottom: 16px; line-height: 1.5; }
+  button.pick {
+    width: 100%; font: 700 16px/1 inherit; color: #241d0e;
+    background: var(--track); border: none; border-radius: 12px;
+    padding: 17px; cursor: pointer; transition: transform 0.08s, box-shadow 0.15s;
+  }
+  button.pick:active:not(:disabled) { transform: scale(0.985); box-shadow: 0 0 22px #debb7b40; }
+  button.pick:disabled { opacity: 0.5; }
+
+  .options { margin-top: 16px; display: flex; flex-direction: column; gap: 12px;
+    border-top: 1px solid var(--line); padding-top: 16px; }
+  .opt { display: flex; align-items: center; justify-content: space-between;
+    font-size: 14.5px; color: var(--dim); }
+  .opt:has(input:checked) { color: var(--text); }
+  .opt input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .switch { flex: none; width: 46px; height: 26px; border-radius: 13px;
+    background: #252a4d; position: relative; transition: background 0.15s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px;
+    width: 20px; height: 20px; border-radius: 50%; background: #8b8fad;
+    transition: transform 0.15s, background 0.15s; }
+  .opt input:checked + .switch { background: var(--track); }
+  .opt input:checked + .switch::after { transform: translateX(20px); background: #241d0e; }
+
+  .console { margin-top: 16px; background: #07080f; border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px; flex: 1; min-height: 150px; overflow-y: auto;
+    font: 13px/1.7 "SF Mono", "Roboto Mono", ui-monospace, monospace; color: var(--dim); }
+  .console .line { overflow-wrap: anywhere; }
+  .console .line::before { content: "\00bb  "; color: #4a4f75; }
+  .console .ok { color: var(--ok); } .console .err { color: var(--err); }
+  .console .info { color: var(--text); }
+  footer { text-align: center; color: #565b80; font-size: 12px; padding: 14px 0; line-height: 1.6; }
+  @media (prefers-reduced-motion: reduce) { .planet.ice { animation: none; transform: translateX(23px); } }
+</style>
+</head>
+<body>
+  <header>
+    <div class="orbit" aria-hidden="true">
+      <div class="planet fire"></div>
+      <div class="planet ice"></div>
+    </div>
+    <h1>CHART <span class="grad">SIMPLIFIER</span></h1>
+    <div class="tagline">Turns any chart into a layout.</div>
+  </header>
+
+  <div class="panel">
+    <p class="lead">Pick a level ZIP. Decorations, visual effects and backgrounds are
+      stripped; gameplay stays exactly as it is.</p>
+    <button class="pick" id="btnZip">Select level ZIP</button>
+    <div class="options">
+      <label class="opt">Keep track colors
+        <input type="checkbox" id="optTrackColor" checked>
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+      <label class="opt">Keep camera movements
+        <input type="checkbox" id="optCamera" checked>
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="console" id="console" role="log" aria-live="polite">
+      <div class="line">Waiting for a level...</div>
+    </div>
+  </div>
+
+  <footer>The simplified level is saved as<br>"&lt;level name&gt; - Simplified.zip" in your Downloads.</footer>
+
+  <script src="jszip.min.js"></script>
+  <script src="simplifier.js"></script>
+  <script>
+    const consoleBox = document.getElementById("console");
+    const btn = document.getElementById("btnZip");
+
+    function log(text, cls) {
+      const line = document.createElement("div");
+      line.className = "line" + (cls ? " " + cls : "");
+      line.textContent = text;
+      consoleBox.appendChild(line);
+      consoleBox.scrollTop = consoleBox.scrollHeight;
+    }
+    function clearConsole() { consoleBox.innerHTML = ""; }
+    function busy(b) { btn.disabled = b; }
+
+    function base64FromBytes(bytes) {
+      let bin = "";
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin);
+    }
+
+    btn.onclick = function () {
+      if (!window.Android || !Android.pickZip) {
+        log("This app must run in the ChartSimplifier Android shell.", "err");
+        return;
+      }
+      busy(true);
+      Android.pickZip();
+    };
+
+    // Called by the native shell after a file is chosen.
+    window.onInputPicked = function (name) {
+      clearConsole();
+      log("Selected: " + name, "info");
+      run(name).catch(function (e) { log("Error: " + (e && e.message ? e.message : e), "err"); busy(false); });
+    };
+
+    async function run(name) {
+      const buf = await fetch("/input/current.zip").then(function (r) { return r.arrayBuffer(); });
+      const opts = {
+        keep_track_color: document.getElementById("optTrackColor").checked,
+        keep_camera: document.getElementById("optCamera").checked
+      };
+      const fallback = name.replace(/\.zip$/i, "");
+      const result = await ChartSimplifier.simplifyLevelFromZip(new Uint8Array(buf), opts, log, fallback);
+      const outBytes = new Uint8Array(await result.blob.arrayBuffer());
+
+      if (!Android.saveStart(result.name)) { log("Could not open Downloads for writing.", "err"); busy(false); return; }
+      const CHUNK = 512 * 1024;
+      for (let off = 0; off < outBytes.length; off += CHUNK) {
+        const sub = outBytes.subarray(off, Math.min(off + CHUNK, outBytes.length));
+        if (!Android.saveChunk(base64FromBytes(sub))) { busy(false); return; }
+      }
+      Android.saveFinish();
+    }
+
+    window.onSaved = function (path) { log("Saved to " + path, "ok"); busy(false); };
+    window.onError = function (msg) { log("Error: " + msg, "err"); busy(false); };
+  </script>
+</body>
+</html>

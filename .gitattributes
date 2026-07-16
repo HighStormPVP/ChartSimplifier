@@ -1,0 +1,10 @@
+# Keep shell scripts and the Gradle wrapper LF so they run on macOS/Linux.
+*.command text eol=lf
+*.sh text eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+# Treat the wrapper jar and icons as binary.
+*.jar binary
+*.icns binary
+*.png binary
+*.ico binary
