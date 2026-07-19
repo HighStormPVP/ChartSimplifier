@@ -1,0 +1,66 @@
+name: Build macOS app
+
+# Builds ChartSimplifier.app on a GitHub-hosted Mac (no local Mac needed) and
+# attaches it to the release for the pushed tag. Also runnable on demand.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac:
+    # Intel runner: the x86_64 .app runs on Intel natively and on Apple Silicon
+    # via Rosetta 2 (an arm64 build would not run on Intel).
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          # setuptools pinned: py2app still uses pkg_resources internals that
+          # newer setuptools removed.
+          python -m pip install "setuptools<70" py2app pywebview pyobjc
+
+      - name: Build .app
+        working-directory: mac
+        run: |
+          rm -rf build dist
+          python setup.py py2app
+
+      - name: Ad-hoc code sign
+        working-directory: mac
+        # Ad-hoc signature ("-") needs no Apple account and keeps Gatekeeper on
+        # Apple Silicon from hard-blocking the unsigned app.
+        run: codesign --force --deep --sign - dist/ChartSimplifier.app
+
+      - name: Verify the bundle
+        working-directory: mac
+        run: |
+          test -d "dist/ChartSimplifier.app" || { echo "no .app built"; exit 1; }
+          codesign --verify --verbose dist/ChartSimplifier.app
+          echo "Bundle contents:"
+          ls -la "dist/ChartSimplifier.app/Contents/Resources" | head -20
+
+      - name: Package .app into a zip
+        working-directory: mac
+        run: ditto -c -k --keepParent dist/ChartSimplifier.app ChartSimplifier-macOS.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChartSimplifier-macOS
+          path: mac/ChartSimplifier-macOS.zip
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: mac/ChartSimplifier-macOS.zip
