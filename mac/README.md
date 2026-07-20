@@ -4,6 +4,19 @@ The desktop app runs natively on macOS - it's the same Python app as on Windows,
 using pywebview's Cocoa/WKWebView backend for the native window and native file
 dialogs. It reuses `simplifier.py` and `index.html` from the repo root unchanged.
 
+## Download a prebuilt .app
+
+Grab **ChartSimplifier-macOS.zip** from the
+[latest release](https://github.com/HighStormPVP/ChartSimplifier/releases/latest),
+unzip it, and drag **ChartSimplifier.app** to Applications. First launch:
+**right-click -> Open** once (it's ad-hoc signed but not notarized, so Gatekeeper
+asks the first time).
+
+The prebuilt app is compiled on a GitHub-hosted Mac by
+[`.github/workflows/build-macos.yml`](../.github/workflows/build-macos.yml) on
+every `v*` tag - no local Mac required. It targets **Apple Silicon (arm64)**. On
+an Intel Mac, run from source or build a `.app` yourself (below).
+
 ## Run from source (no build)
 
 Requires Python 3 (from [python.org](https://www.python.org/downloads/macos/) or
