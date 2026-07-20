@@ -12,9 +12,11 @@ permissions:
 
 jobs:
   build-mac:
-    # Intel runner: the x86_64 .app runs on Intel natively and on Apple Silicon
-    # via Rosetta 2 (an arm64 build would not run on Intel).
-    runs-on: macos-13
+    # Apple Silicon runner (macos-latest) - reliably available on the free tier.
+    # Produces an arm64 .app that runs natively on Apple Silicon Macs. (The
+    # Intel macos-13 label sat unscheduled for 24h, so we don't use it.)
+    runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
